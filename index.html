@@ -80,6 +80,11 @@ textarea::placeholder{color:var(--muted);opacity:.8}
 .empty{background:var(--card);border:1px dashed var(--line);border-radius:20px;padding:28px 18px;color:var(--muted);text-align:center}
 .tip{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
 button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ask{background:var(--tweak-soft);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ask-q{font-weight:600;color:var(--fg)}
+.ask-b{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ask-b button{font-size:14px;font-weight:600;min-height:44px;border-radius:999px;border:1px solid var(--tweak);background:transparent;color:var(--tweak);cursor:pointer}
+.ask-b button[aria-pressed="true"]{background:var(--tweak);color:var(--card)}
 .sk{height:230px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(100deg,var(--card) 40%,var(--bg) 50%,var(--card) 60%) var(--card);background-size:200% 100%;animation:sk 1.2s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
 .fresh{font-size:12px;color:var(--muted)}
@@ -103,7 +108,7 @@ var state={week:null,weeks:[],meals:[],responses:{}};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]})}
 function $(s){return document.querySelector(s)}
 var API="https://script.google.com/macros/s/AKfycbx-fXKgCZBpkVv6VOAOFqIDfpEhA8xr5i-7a7w4rOzuTy3vgXv54m2ifcdCQEfIaVVk/exec";
-var CK="dp-cache-v1";
+var CK="dp-cache-v2";
 function cacheGet(){try{return JSON.parse(localStorage.getItem(CK)||"null")}catch(e){return null}}
 function cacheSet(d){try{localStorage.setItem(CK,JSON.stringify(d))}catch(e){}}
 var shown=false;
@@ -141,6 +146,7 @@ function card(m){
   if(m.updated)h+='<div class="updated">'+esc(m.updated)+'</div>';
   h+='<div class="top"><span class="day">'+esc(m.day)+'</span><span class="time">'+esc(m.time)+'</span></div>';
   h+='<h2>'+esc(m.name)+'</h2><p class="desc">'+esc(m.desc)+'</p>';
+  if(m.question)h+='<div class="ask"><div class="ask-q">'+esc(m.question)+'</div><div class="ask-b"><button type="button" data-a="yes">Sounds good</button><button type="button" data-a="no">No thanks</button></div></div>';
   h+='<div class="label">Sound good?</div><div class="picks">'+PICKS.map(function(p){return '<button type="button" data-v="'+p[0]+'">'+p[1]+'</button>'}).join("")+'</div>';
   if(m.sides.length)h+='<div class="label">Pick your side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div>';
   h+='<label class="label" for="n-'+esc(m.id)+'">Note</label><textarea id="n-'+esc(m.id)+'" rows="1" placeholder="Anything to change? (optional)"></textarea>';
@@ -149,6 +155,7 @@ function card(m){
   el.innerHTML=h;
   var r=function(){return state.responses[m.id]||(state.responses[m.id]={})};
   el.querySelectorAll(".picks button").forEach(function(b){b.onclick=function(){save(m,el,{pick:r().pick===b.dataset.v?"":b.dataset.v})}});
+  el.querySelectorAll(".ask button").forEach(function(b){b.onclick=function(){var cur=r();var on=cur.change===m.changeId&&cur.approve===b.dataset.a;save(m,el,{approve:on?"":b.dataset.a,change:m.changeId})}});
   el.querySelectorAll(".sides button").forEach(function(b){b.onclick=function(){save(m,el,{side:r().side===b.dataset.side?"":b.dataset.side})}});
   el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,{stars:r().stars===n?0:n})}});
   var ta=el.querySelector("textarea"),t;ta.value=r().note||"";
@@ -159,6 +166,7 @@ function card(m){
 function paint(m,el){
   var r=state.responses[m.id]||{};
   el.querySelectorAll(".picks button").forEach(function(b){b.setAttribute("aria-pressed",r.pick===b.dataset.v)});
+  el.querySelectorAll(".ask button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
   el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
   el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
   el.querySelector(".hint").textContent=r.stars?"":"How was it?";
