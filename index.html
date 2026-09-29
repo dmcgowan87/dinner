@@ -14,6 +14,8 @@
 </head>
 <body>
 
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Figtree:wght@400;500;600&display=swap">
 <style>
@@ -78,6 +80,9 @@ textarea::placeholder{color:var(--muted);opacity:.8}
 .empty{background:var(--card);border:1px dashed var(--line);border-radius:20px;padding:28px 18px;color:var(--muted);text-align:center}
 .tip{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
 button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sk{height:230px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(100deg,var(--card) 40%,var(--bg) 50%,var(--card) 60%) var(--card);background-size:200% 100%;animation:sk 1.2s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.fresh{font-size:12px;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 <div class="wrap">
@@ -89,7 +94,7 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outl
   <nav class="weeks" id="weeks" hidden></nav>
   <div id="summary"></div>
   <div class="how"><strong>Yes, please</strong> if it sounds good. <strong>With tweaks</strong> if you'd change something (add a note). <strong>Pass</strong> and it gets swapped.</div>
-  <section class="meals" id="meals"><div class="empty">Loading this week's menu…</div></section>
+  <section class="meals" id="meals"><div class="sk"></div><div class="sk"></div><div class="sk"></div></section>
   <p class="tip">Everything saves as you tap. To keep this handy, tap Share → Add to Home Screen.</p>
 </div>
 <script>
@@ -98,11 +103,21 @@ var state={week:null,weeks:[],meals:[],responses:{}};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]})}
 function $(s){return document.querySelector(s)}
 var API="https://script.google.com/macros/s/AKfycbx-fXKgCZBpkVv6VOAOFqIDfpEhA8xr5i-7a7w4rOzuTy3vgXv54m2ifcdCQEfIaVVk/exec";
+var CK="dp-cache-v1";
+function cacheGet(){try{return JSON.parse(localStorage.getItem(CK)||"null")}catch(e){return null}}
+function cacheSet(d){try{localStorage.setItem(CK,JSON.stringify(d))}catch(e){}}
+var shown=false;
 function load(week){
+  if(!week&&!shown){var c=cacheGet();if(c&&c.meals){state=c;draw();shown=true}}
   fetch(API+"?api=data"+(week?"&week="+encodeURIComponent(week):"")+"&t="+Date.now(),{credentials:"omit"})
     .then(function(r){return r.json()})
-    .then(function(d){if(!d||!d.meals)throw 0;state=d;draw()})
-    .catch(function(){$("#meals").innerHTML='<div class="empty">Couldn\'t load the menu. Check your connection and pull down to refresh.</div>'});
+    .then(function(d){if(!d||!d.meals)throw 0;
+      var same=JSON.stringify(d)===JSON.stringify(state);
+      if(!week||week===d.weeks[0])cacheSet(d);
+      if(same&&shown)return;
+      var a=document.activeElement;if(shown&&a&&a.matches&&a.matches("textarea"))return;
+      state=d;draw();shown=true})
+    .catch(function(){if(!shown)$("#meals").innerHTML='<div class="empty">Couldn\'t load the menu. Check your connection and reopen the page.</div>'});
 }
 function fmt(d){var p=d.split("-");var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1];return m+" "+(+p[2])}
 function draw(){
