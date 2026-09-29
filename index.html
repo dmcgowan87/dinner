@@ -181,7 +181,7 @@ function save(m,el,patch){
     .then(function(j){s.textContent=j&&j.ok?"Saved":"Couldn't save. Tap again."})
     .catch(function(){s.textContent="Couldn't save. Check your connection and tap again."});
 }
-load();
+load(new URLSearchParams(location.search).get("week")||undefined);
 </script>
 <script>document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&state.week&&!document.activeElement.matches("textarea"))load(state.week)});</script>
 </body>
