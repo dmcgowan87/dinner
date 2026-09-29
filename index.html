@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dinner Picks">
+<meta name="theme-color" content="#f5f2ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161514" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>Dinner Picks</title>
+</head>
+<body>
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Editorial menu card: warm stone paper, deep sage ink, Fraunces for dish names */
+:root{
+  --bg:#f5f2ee; --card:#ffffff; --fg:#26241f; --muted:#76706a; --line:#e7e1d9;
+  --accent:#3f5a45; --accent-ink:#ffffff; --accent-soft:#e8eee8;
+  --yes:#3f5a45; --yes-soft:#e8eee8; --tweak:#8f6436; --tweak-soft:#f4eadf; --no:#9a4848; --no-soft:#f5e5e3;
+  --star:#c8953a; --shadow:0 1px 2px rgba(38,36,31,.04),0 10px 28px rgba(38,36,31,.06);
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Figtree", -apple-system, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#161514; --card:#201e1c; --fg:#eeeae4; --muted:#a59e95; --line:#34302c;
+  --accent:#a3c1a8; --accent-ink:#141a15; --accent-soft:#26302a;
+  --yes:#a3c1a8; --yes-soft:#26302a; --tweak:#dcb07c; --tweak-soft:#3a2f23; --no:#e59a92; --no-soft:#3d2524;
+  --star:#e8b55a; --shadow:none; color-scheme:dark }}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit}
+.wrap{max-width:600px;margin:0 auto;padding-inline:18px;padding-block:calc(env(safe-area-inset-top,0px) + 28px) calc(env(safe-area-inset-bottom,0px) + 56px);display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--display);font-weight:400;font-size:36px;line-height:1.08;letter-spacing:-.01em;margin:8px 0 0;font-variation-settings:"opsz" 144}
+.sub{color:var(--muted);margin:10px 0 0;max-width:34ch}
+.weeks{display:flex;gap:8px;flex-wrap:wrap}
+.weeks button{font-size:14px;font-weight:600;min-height:40px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:6px 16px}
+.weeks button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip{display:inline-block;font-size:13px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;margin:0 14px 0 0}
+.chip b{color:var(--fg);font-weight:600}
+.how{font-size:14px;color:var(--muted);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}
+.how strong{color:var(--fg);font-weight:600}
+.meals{display:flex;flex-direction:column;gap:16px}
+.meal{background:var(--card);border-radius:20px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.meal.is-updated{border-color:var(--tweak)}
+.updated{align-self:flex-start;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:var(--tweak-soft);color:var(--tweak)}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.day{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.time{font-size:13px;color:var(--muted);white-space:nowrap}
+.meal h2{font-family:var(--display);font-weight:400;font-size:25px;line-height:1.15;letter-spacing:-.005em;margin:-4px 0 0;font-variation-settings:"opsz" 72;text-wrap:balance}
+.desc{margin:0;color:var(--fg)}
+.label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.picks button{white-space:nowrap}
+.picks button,.sides button{font-size:14px;font-weight:600;min-height:48px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);padding:6px 4px;line-height:1.2;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.picks button[data-v="yes"][aria-pressed="true"]{background:var(--yes);border-color:var(--yes);color:var(--accent-ink)}
+.picks button[data-v="tweak"][aria-pressed="true"]{background:var(--tweak-soft);border-color:var(--tweak);color:var(--tweak)}
+.picks button[data-v="no"][aria-pressed="true"]{background:var(--no-soft);border-color:var(--no);color:var(--no)}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sides button{border-radius:14px}
+.sides button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+textarea{font:inherit;font-size:16px;width:100%;min-height:46px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--bg);color:var(--fg)}
+textarea::placeholder{color:var(--muted);opacity:.8}
+.rate{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:4px}
+.stars{display:flex;align-items:center;flex-wrap:wrap;margin-left:-8px}
+.stars button{font-size:26px;line-height:1;background:none;border:0;color:var(--muted);opacity:.35;min-width:44px;min-height:44px;padding:0;cursor:pointer}
+.stars button.on{color:var(--star);opacity:1}
+.hint{font-size:13px;color:var(--muted);margin-left:4px}
+.saved{font-size:12px;color:var(--muted)}
+.saved:empty{display:none}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:20px;padding:28px 18px;color:var(--muted);text-align:center}
+.tip{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow" id="weekLabel">This week's dinners</div>
+    <h1>What sounds good?</h1>
+    <p class="sub">Tap a choice for each dinner. After we eat it, come back and give it stars.</p>
+  </header>
+  <nav class="weeks" id="weeks" hidden></nav>
+  <div id="summary"></div>
+  <div class="how"><strong>Yes, please</strong> if it sounds good. <strong>With tweaks</strong> if you'd change something (add a note). <strong>Pass</strong> and it gets swapped.</div>
+  <section class="meals" id="meals"><div class="empty">Loading this week's menu…</div></section>
+  <p class="tip">Everything saves as you tap. To keep this handy, tap Share → Add to Home Screen.</p>
+</div>
+<script>
+var PICKS=[["yes","Yes, please"],["tweak","With tweaks"],["no","Pass"]];
+var state={week:null,weeks:[],meals:[],responses:{}};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]})}
+function $(s){return document.querySelector(s)}
+var API="https://script.google.com/macros/s/AKfycbx-fXKgCZBpkVv6VOAOFqIDfpEhA8xr5i-7a7w4rOzuTy3vgXv54m2ifcdCQEfIaVVk/exec";
+function load(week){
+  fetch(API+"?api=data"+(week?"&week="+encodeURIComponent(week):"")+"&t="+Date.now(),{credentials:"omit"})
+    .then(function(r){return r.json()})
+    .then(function(d){if(!d||!d.meals)throw 0;state=d;draw()})
+    .catch(function(){$("#meals").innerHTML='<div class="empty">Couldn\'t load the menu. Check your connection and pull down to refresh.</div>'});
+}
+function fmt(d){var p=d.split("-");var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1];return m+" "+(+p[2])}
+function draw(){
+  var nav=$("#weeks");nav.innerHTML="";
+  state.weeks.forEach(function(w){var b=document.createElement("button");b.textContent=fmt(w);b.setAttribute("aria-pressed",w===state.week);b.onclick=function(){load(w)};nav.appendChild(b)});
+  nav.hidden=state.weeks.length<2;
+  if(!state.week){$("#meals").innerHTML='<div class="empty">No menu yet. New dinners show up here once they\'re planned.</div>';return}
+  $("#weekLabel").textContent="The week of "+fmt(state.week);
+  var box=$("#meals");box.innerHTML="";
+  state.meals.forEach(function(m){box.appendChild(card(m))});
+  summary();
+}
+function summary(){
+  var y=0,t=0,n=0,s=0,c=0;
+  state.meals.forEach(function(m){var r=state.responses[m.id]||{};if(r.pick==="yes")y++;if(r.pick==="tweak")t++;if(r.pick==="no")n++;if(r.stars){s+=r.stars;c++}});
+  $("#summary").innerHTML='<span class="chip"><b>'+y+'</b> yes · <b>'+t+'</b> tweaks · <b>'+n+'</b> pass</span>'+(c?'<span class="chip"><b>★ '+(s/c).toFixed(1)+'</b> from '+c+' rated</span>':"");
+}
+function card(m){
+  var el=document.createElement("article");el.className="meal"+(m.updated?" is-updated":"");
+  var h="";
+  if(m.updated)h+='<div class="updated">'+esc(m.updated)+'</div>';
+  h+='<div class="top"><span class="day">'+esc(m.day)+'</span><span class="time">'+esc(m.time)+'</span></div>';
+  h+='<h2>'+esc(m.name)+'</h2><p class="desc">'+esc(m.desc)+'</p>';
+  h+='<div class="label">Sound good?</div><div class="picks">'+PICKS.map(function(p){return '<button type="button" data-v="'+p[0]+'">'+p[1]+'</button>'}).join("")+'</div>';
+  if(m.sides.length)h+='<div class="label">Pick your side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div>';
+  h+='<label class="label" for="n-'+esc(m.id)+'">Note</label><textarea id="n-'+esc(m.id)+'" rows="1" placeholder="Anything to change? (optional)"></textarea>';
+  h+='<div class="rate"><div class="label">After dinner</div><div class="stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' stars">★</button>'}).join("")+'<span class="hint"></span></div></div>';
+  h+='<div class="saved" aria-live="polite"></div>';
+  el.innerHTML=h;
+  var r=function(){return state.responses[m.id]||(state.responses[m.id]={})};
+  el.querySelectorAll(".picks button").forEach(function(b){b.onclick=function(){save(m,el,{pick:r().pick===b.dataset.v?"":b.dataset.v})}});
+  el.querySelectorAll(".sides button").forEach(function(b){b.onclick=function(){save(m,el,{side:r().side===b.dataset.side?"":b.dataset.side})}});
+  el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,{stars:r().stars===n?0:n})}});
+  var ta=el.querySelector("textarea"),t;ta.value=r().note||"";
+  ta.oninput=function(){clearTimeout(t);t=setTimeout(function(){save(m,el,{note:ta.value.trim()})},1000)};
+  ta.onblur=function(){clearTimeout(t);if(ta.value.trim()!==(r().note||""))save(m,el,{note:ta.value.trim()})};
+  paint(m,el);return el;
+}
+function paint(m,el){
+  var r=state.responses[m.id]||{};
+  el.querySelectorAll(".picks button").forEach(function(b){b.setAttribute("aria-pressed",r.pick===b.dataset.v)});
+  el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
+  el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
+  el.querySelector(".hint").textContent=r.stars?"":"How was it?";
+}
+function save(m,el,patch){
+  var r=state.responses[m.id]||(state.responses[m.id]={});
+  for(var k in patch)r[k]=patch[k];
+  paint(m,el);summary();
+  var s=el.querySelector(".saved");s.textContent="Saving…";
+  fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({week:state.week,meal:m.id,dish:m.name,patch:patch})})
+    .then(function(r){return r.json()})
+    .then(function(j){s.textContent=j&&j.ok?"Saved":"Couldn't save. Tap again."})
+    .catch(function(){s.textContent="Couldn't save. Check your connection and tap again."});
+}
+load();
+</script>
+<script>document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&state.week&&!document.activeElement.matches("textarea"))load(state.week)});</script>
+</body>
+</html>
