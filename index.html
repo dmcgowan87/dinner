@@ -76,6 +76,14 @@ textarea::placeholder{color:var(--muted);opacity:.8}
 .stars button.on{color:var(--star);opacity:1}
 .hint{font-size:13px;color:var(--muted);margin-left:4px}
 .saved{font-size:12px;color:var(--muted)}
+.later{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.skip{align-self:flex-start;background:none;border:0;padding:8px 0;min-height:36px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.skipped-note{font-size:14px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.skipped-note .skip{padding:0}
+.nudge{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--accent-soft);border-radius:16px;padding:12px 14px;font-size:14px}
+.nudge:empty{display:none}
+.nudge button{flex:none;font:inherit;font-weight:600;font-size:14px;min-height:40px;border:0;border-radius:999px;padding:6px 16px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.chip.done{color:var(--accent);font-weight:600}
 .saved:empty{display:none}
 .empty{background:var(--card);border:1px dashed var(--line);border-radius:20px;padding:28px 18px;color:var(--muted);text-align:center}
 .tip{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
@@ -98,6 +106,7 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outl
   </header>
   <nav class="weeks" id="weeks" hidden></nav>
   <div id="summary"></div>
+  <div class="nudge" id="nudge" aria-live="polite"></div>
   <div class="how"><strong>Yes, please</strong> if it sounds good. <strong>With tweaks</strong> if you'd change something (add a note). <strong>Pass</strong> and it gets swapped.</div>
   <section class="meals" id="meals"><div class="sk"></div><div class="sk"></div><div class="sk"></div></section>
   <p class="tip">Everything saves as you tap. To keep this handy, tap Share → Add to Home Screen.</p>
@@ -112,11 +121,17 @@ var CK="dp-cache-v2";
 function cacheGet(){try{return JSON.parse(localStorage.getItem(CK)||"null")}catch(e){return null}}
 function cacheSet(d){try{localStorage.setItem(CK,JSON.stringify(d))}catch(e){}}
 var shown=false;
+var PK="dp-pending-v1";
+function pendGet(){try{return JSON.parse(localStorage.getItem(PK)||"{}")}catch(e){return {}}}
+function pendSet(p){try{localStorage.setItem(PK,JSON.stringify(p))}catch(e){}}
+var memPend={};
+function pending(){var p=pendGet();for(var k in memPend)if(!p[k])p[k]=memPend[k];return p}
+function mergePending(d){var p=pending();for(var k in p){var e=p[k];if(e.week!==d.week)continue;var r=d.responses[e.meal]||(d.responses[e.meal]={});for(var f in e.patch)r[f]=e.patch[f]}return d}
 function load(week){
   if(!week&&!shown){var c=cacheGet();if(c&&c.meals){state=c;draw();shown=true}}
   fetch(API+"?api=data"+(week?"&week="+encodeURIComponent(week):"")+"&t="+Date.now(),{credentials:"omit"})
     .then(function(r){return r.json()})
-    .then(function(d){if(!d||!d.meals)throw 0;
+    .then(function(d){if(!d||!d.meals)throw 0;mergePending(d);
       var same=JSON.stringify(d)===JSON.stringify(state);
       if(!week||week===d.weeks[0])cacheSet(d);
       if(same&&shown)return;
@@ -124,6 +139,11 @@ function load(week){
       state=d;draw();shown=true})
     .catch(function(){if(!shown)$("#meals").innerHTML='<div class="empty">Couldn\'t load the menu. Check your connection and reopen the page.</div>'});
 }
+var DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+function ymd(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function dinnerDate(week,m){var i=DAYS.indexOf(String(m.day).toLowerCase());if(i<0)return null;var p=week.split("-"),d=new Date(+p[0],+p[1]-1,+p[2],12);for(var k=0;k<7&&d.getDay()!==i;k++)d.setDate(d.getDate()+1);return ymd(d)}
+function eaten(m,r){return r.pick!=="no"||(m.changeId&&r.change===m.changeId&&r.approve==="yes")}
+function needsStars(week,meals,resp){var t=ymd(new Date());return meals.filter(function(m){var r=resp[m.id]||{},d=dinnerDate(week,m);return d&&d<t&&eaten(m,r)&&!r.stars&&!r.skipped})}
 function fmt(d){var p=d.split("-");var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1];return m+" "+(+p[2])}
 function draw(){
   var nav=$("#weeks");nav.innerHTML="";
@@ -133,15 +153,26 @@ function draw(){
   $("#weekLabel").textContent="The week of "+fmt(state.week);
   var box=$("#meals");box.innerHTML="";
   state.meals.forEach(function(m){box.appendChild(card(m))});
-  summary();
+  summary();nudge();
+}
+var prevCache={};
+function nudge(){
+  var el=$("#nudge");el.innerHTML="";
+  var i=state.weeks.indexOf(state.week),older=state.weeks[i+1];
+  if(i!==0||!older)return;
+  var show=function(d){var n=needsStars(d.week,d.meals,d.responses).length;if(!n||state.week!==state.weeks[0])return;
+    el.innerHTML='<span>'+n+' dinner'+(n>1?"s":"")+' from the week of '+fmt(d.week)+' still need'+(n>1?"":"s")+' stars</span><button type="button">Rate</button>';
+    el.querySelector("button").onclick=function(){load(d.week);scrollTo(0,0)}};
+  if(prevCache[older])return show(prevCache[older]);
+  fetch(API+"?api=data&week="+encodeURIComponent(older)+"&t="+Date.now(),{credentials:"omit"}).then(function(r){return r.json()}).then(function(d){if(d&&d.meals&&d.week===older){mergePending(d);prevCache[older]=d;show(d)}}).catch(function(){});
 }
 function summary(){
   var y=0,t=0,n=0,s=0,c=0;
   state.meals.forEach(function(m){var r=state.responses[m.id]||{};if(r.pick==="yes")y++;if(r.pick==="tweak")t++;if(r.pick==="no")n++;if(r.stars){s+=r.stars;c++}});
-  $("#summary").innerHTML='<span class="chip"><b>'+y+'</b> yes · <b>'+t+'</b> tweaks · <b>'+n+'</b> pass</span>'+(c?'<span class="chip"><b>★ '+(s/c).toFixed(1)+'</b> from '+c+' rated</span>':"");
+  $("#summary").innerHTML='<span class="chip"><b>'+y+'</b> yes · <b>'+t+'</b> tweaks · <b>'+n+'</b> pass</span>'+(c?'<span class="chip"><b>★ '+(s/c).toFixed(1)+'</b> from '+c+' rated</span>':"")+(state.meals.length&&y+t+n===state.meals.length?'<span class="chip done">✓ All picked, thank you</span>':"");
 }
 function card(m){
-  var el=document.createElement("article");el.className="meal"+(m.updated?" is-updated":"");
+  var el=document.createElement("article");el.className="meal"+(m.updated?" is-updated":"");el.dataset.meal=m.id;var dd=dinnerDate(state.week,m),past=!dd||dd<=ymd(new Date());
   var h="";
   if(m.updated)h+='<div class="updated">'+esc(m.updated)+'</div>';
   h+='<div class="top"><span class="day">'+esc(m.day)+'</span><span class="time">'+esc(m.time)+'</span></div>';
@@ -150,7 +181,8 @@ function card(m){
   h+='<div class="label">Sound good?</div><div class="picks">'+PICKS.map(function(p){return '<button type="button" data-v="'+p[0]+'">'+p[1]+'</button>'}).join("")+'</div>';
   if(m.sides.length)h+='<div class="label">Pick your side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div>';
   h+='<label class="label" for="n-'+esc(m.id)+'">Note</label><textarea id="n-'+esc(m.id)+'" rows="1" placeholder="Anything to change? (optional)"></textarea>';
-  h+='<div class="rate"><div class="label">After dinner</div><div class="stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' stars">★</button>'}).join("")+'<span class="hint"></span></div></div>';
+  if(past)h+='<div class="rate"><div class="label">After dinner</div><div class="stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' stars">★</button>'}).join("")+'<span class="hint"></span></div><button type="button" class="skip" data-skip="yes">We didn\'t make this one</button><div class="skipped-note" hidden>Marked as not made. <button type="button" class="skip" data-skip="">Undo</button></div></div>';
+  else h+='<div class="later">Stars open after dinner on '+esc(m.day)+'.</div>';
   h+='<div class="saved" aria-live="polite"></div>';
   el.innerHTML=h;
   var r=function(){return state.responses[m.id]||(state.responses[m.id]={})};
@@ -158,6 +190,7 @@ function card(m){
   el.querySelectorAll(".ask button").forEach(function(b){b.onclick=function(){var cur=r();var on=cur.change===m.changeId&&cur.approve===b.dataset.a;save(m,el,{approve:on?"":b.dataset.a,change:m.changeId})}});
   el.querySelectorAll(".sides button").forEach(function(b){b.onclick=function(){save(m,el,{side:r().side===b.dataset.side?"":b.dataset.side})}});
   el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,{stars:r().stars===n?0:n})}});
+  el.querySelectorAll("[data-skip]").forEach(function(b){b.onclick=function(){save(m,el,b.dataset.skip?{skipped:"yes",stars:0}:{skipped:""})}});
   var ta=el.querySelector("textarea"),t;ta.value=r().note||"";
   ta.oninput=function(){clearTimeout(t);t=setTimeout(function(){save(m,el,{note:ta.value.trim()})},1000)};
   ta.onblur=function(){clearTimeout(t);if(ta.value.trim()!==(r().note||""))save(m,el,{note:ta.value.trim()})};
@@ -169,20 +202,37 @@ function paint(m,el){
   el.querySelectorAll(".ask button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
   el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
   el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
-  el.querySelector(".hint").textContent=r.stars?"":"How was it?";
+  var hint=el.querySelector(".hint");if(hint)hint.textContent=r.stars?"":"How was it?";
+  var st=el.querySelector(".stars"),sk=el.querySelector(".skip[data-skip='yes']"),sn=el.querySelector(".skipped-note");
+  if(st){st.hidden=!!r.skipped;sk.hidden=!!r.skipped||!!r.stars;sn.hidden=!r.skipped}
 }
 function save(m,el,patch){
   var r=state.responses[m.id]||(state.responses[m.id]={});
   for(var k in patch)r[k]=patch[k];
-  paint(m,el);summary();
-  var s=el.querySelector(".saved");s.textContent="Saving…";
-  fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({week:state.week,meal:m.id,dish:m.name,patch:patch})})
-    .then(function(r){return r.json()})
-    .then(function(j){s.textContent=j&&j.ok?"Saved":"Couldn't save. Tap again."})
-    .catch(function(){s.textContent="Couldn't save. Check your connection and tap again."});
+  paint(m,el);summary();delete prevCache[state.week];
+  var key=state.week+"|"+m.id,p=pendGet(),e=p[key]||memPend[key]||{week:state.week,meal:m.id,dish:m.name,patch:{}};
+  for(var f in patch)e.patch[f]=patch[f];
+  p[key]=e;memPend[key]=e;pendSet(p);
+  status(state.week,m.id,"Saving…");flush();
 }
+function status(week,meal,txt){if(week!==state.week)return;var c=document.querySelector('[data-meal="'+meal+'"] .saved');if(c)c.textContent=txt}
+var flushing=false,retryT=null;
+function flush(){
+  if(flushing)return;var p=pending(),keys=Object.keys(p);if(!keys.length)return;flushing=true;
+  var key=keys[0],e=p[key],sent=JSON.stringify(e.patch);
+  fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(e)})
+    .then(function(r){return r.json()})
+    .then(function(j){flushing=false;
+      if(!j||!j.ok){var q=pendGet();delete q[key];pendSet(q);delete memPend[key];status(e.week,e.meal,"Couldn't save that. Tap again.");return flush()}
+      var q=pendGet(),cur=q[key]||memPend[key];
+      if(cur&&JSON.stringify(cur.patch)===sent){delete q[key];pendSet(q);delete memPend[key];status(e.week,e.meal,"Saved")}
+      flush()})
+    .catch(function(){flushing=false;status(e.week,e.meal,"Saved on your phone. It'll send when you're back online.");clearTimeout(retryT);retryT=setTimeout(flush,20000)});
+}
+window.addEventListener("online",flush);
+setTimeout(flush,1500);
 load(new URLSearchParams(location.search).get("week")||undefined);
 </script>
-<script>document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&state.week&&!document.activeElement.matches("textarea"))load(state.week)});</script>
+<script>document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"){flush();if(state.week&&!document.activeElement.matches("textarea"))load(state.week)}});</script>
 </body>
 </html>
