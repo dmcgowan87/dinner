@@ -233,6 +233,7 @@ textarea{background:rgba(255,235,225,.06)!important}
 .sc-was{font-size:14px;color:var(--muted);margin:0}
 .acts.alt .act.tw{opacity:.25;pointer-events:none}
 .st.soon{color:var(--tweak)}
+.sync{margin-top:8px;font-size:13px;color:var(--muted)}.sync.warn{color:var(--tweak)}
 .alt-ask .ask-q b{font-weight:600}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -391,17 +392,21 @@ function save(m,el,patch){
 }
 function status(week,meal,txt){if(week!==state.week)return;var c=document.querySelector('article.meal[data-meal="'+meal+'"] .saved');if(c)c.textContent=txt}
 var flushing=false,retryT=null;
+var offline=false,syncFail=false;
+function syncNote(){var el=document.getElementById("sync");if(!el)return;var wk=state.week+"|",n=Object.keys(pending()).filter(function(k){return k.indexOf(wk)===0}).length;
+  el.textContent=syncFail?"One answer didn't go through. Tap that dinner and save it again.":n?(offline?"Saved on your phone. It'll reach Dennis when you're back online.":"Sending to Dennis…"):"";el.hidden=!el.textContent;el.classList.toggle("warn",syncFail||offline)}
+window.addEventListener("pagehide",function(){var p=pending();for(var k in p)try{fetch(API,{method:"POST",credentials:"omit",keepalive:true,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p[k])})}catch(_){}});
 function flush(){
   if(flushing)return;var p=pending(),keys=Object.keys(p);if(!keys.length)return;flushing=true;
   var key=keys[0],e=p[key],sent=JSON.stringify(e.patch);
-  fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(e)})
+  fetch(API,{method:"POST",credentials:"omit",keepalive:true,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(e)})
     .then(function(r){return r.json()})
     .then(function(j){flushing=false;
-      if(!j||!j.ok){var q=pendGet();delete q[key];pendSet(q);delete memPend[key];status(e.week,e.meal,"Couldn't save that. Tap again.");return flush()}
+      if(!j||!j.ok){var q=pendGet();delete q[key];pendSet(q);delete memPend[key];status(e.week,e.meal,"Couldn't save that. Tap again.");syncFail=true;syncNote();return flush()}
       var q=pendGet(),cur=q[key]||memPend[key];
       if(cur&&JSON.stringify(cur.patch)===sent){delete q[key];pendSet(q);delete memPend[key];status(e.week,e.meal,"Saved")}
-      flush()})
-    .catch(function(){flushing=false;status(e.week,e.meal,"Saved on your phone. It'll send when you're back online.");clearTimeout(retryT);retryT=setTimeout(flush,20000)});
+      offline=false;syncNote();flush()})
+    .catch(function(){flushing=false;offline=true;syncNote();status(e.week,e.meal,"Saved on your phone. It'll send when you're back online.");clearTimeout(retryT);retryT=setTimeout(flush,20000)});
 }
 window.addEventListener("online",flush);
 setTimeout(flush,1500);
@@ -442,7 +447,7 @@ function deck(){
   h1.textContent=rateLeft?"How Was Dinner?":"On the Menu";
   if(q.length>total)total=q.length;if(!q.length)total=0;
   var d=$("#deck");d.innerHTML="";
-  $("#acts").hidden=!q.length||q[0].kind==="rate";$("#acts").classList.toggle("alt",!!q.length&&q[0].kind==="alt");
+  $("#acts").hidden=!q.length||q[0].kind==="rate";$("#acts").classList.toggle("alt",!!q.length&&q[0].kind==="alt");$("#acts").querySelector('[data-act="tweak"]').disabled=!!q.length&&q[0].kind==="alt";
   $("#acts").querySelector('[data-act="undo"]').disabled=!history_.length;
   var hint=$(".swipe-hint");
   var done=total-q.length,pg=$("#prog");pg.innerHTML=q.length&&total>1?Array.from({length:total},function(_,i){return '<span class="'+(i<done?"on":"")+'"></span>'}).join(""):"";
@@ -498,10 +503,11 @@ function recap(){
     var needSide=r.pick&&r.pick!=="no"&&m.sides.length&&!r.side&&!dinnerPassed(m);
     return '<button type="button" class="rrow" data-id="'+esc(m.id)+'"><span class="rday">'+esc(String(m.day).slice(0,3))+'</span><span class="rmain"><span class="rname">'+esc(v.name)+'</span>'+(extra?'<span class="rextra">'+extra+'</span>':needSide?'<span class="rextra warn">Pick a side</span>':"")+'</span>'+st+I.chev+'</button>'}).join("");
   var days=open.map(function(m){return String(m.day).slice(0,3)}),dl=days.length>1?days.slice(0,-1).join(", ")+" and "+days[days.length-1]:days[0];
-  el.innerHTML='<div class="recap-top"><div class="check'+(open.length?' soon':'')+'" aria-hidden="true">'+(open.length?sm(I.swap,30):I.check)+'</div><div class="recap-t">'+(open.length?"Almost There":picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(open.length?"Dennis will find something new for "+esc(dl)+", "+esc(HER)+(/\.$/.test(HER)?"":".")+" Everything else is set.":picking?"Dennis has your picks, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Tap a dinner to change it.":"Thank you, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Your stars are noted for next time.")+'</div></div><div class="rlist">'+rows+'</div>'+
+  el.innerHTML='<div class="recap-top"><div class="check'+(open.length?' soon':'')+'" aria-hidden="true">'+(open.length?sm(I.swap,30):I.check)+'</div><div class="recap-t">'+(open.length?"Almost There":picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(open.length?"Dennis will find something new for "+esc(dl)+", "+esc(HER)+(/\.$/.test(HER)?"":".")+" Everything else is set.":picking?"Dennis has your picks, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Tap a dinner to change it.":"Thank you, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Your stars are noted for next time.")+'</div><div class="sync" id="sync" role="status" hidden></div></div><div class="rlist">'+rows+'</div>'+
     (!newest?'<button type="button" class="btn ghost" data-back>Back to This Week</button>':"");
   el.querySelectorAll(".rrow").forEach(function(b){b.onclick=function(){var m=state.meals.filter(function(x){return x.id===b.dataset.id})[0];if(m)sheetEdit(m)}});
   var bk=el.querySelector("[data-back]");if(bk)bk.onclick=function(){load(state.weeks[0])};
+  setTimeout(syncNote,0);
   return el;
 }
 function drag(el,m){
