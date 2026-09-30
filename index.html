@@ -228,6 +228,12 @@ h1{font-family:var(--serif);font-weight:600;letter-spacing:.2px}
 .sheet-in{background:#141012;box-shadow:inset 0 .5px 0 rgba(255,235,225,.12)}
 textarea{background:rgba(255,235,225,.06)!important}
 .weeks button[aria-pressed="true"]{background:var(--fg);color:#0b0809}
+.check.soon{background:linear-gradient(145deg,#f3cf8f,#d99a4e);box-shadow:0 0 40px rgba(243,190,120,.35);color:#2a1606}
+.sc-alt{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#2a1606;background:linear-gradient(145deg,#f3cf8f,#d99a4e);padding:4px 10px;border-radius:999px;margin-bottom:6px}
+.sc-was{font-size:14px;color:var(--muted);margin:0}
+.acts.alt .act.tw{opacity:.25;pointer-events:none}
+.st.soon{color:var(--tweak)}
+.alt-ask .ask-q b{font-weight:600}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 <div class="wrap">
@@ -302,7 +308,10 @@ function load(week){
 var DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 function ymd(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 function dinnerDate(week,m){var i=DAYS.indexOf(String(m.day).toLowerCase());if(i<0)return null;var p=week.split("-"),d=new Date(+p[0],+p[1]-1,+p[2],12);for(var k=0;k<7&&d.getDay()!==i;k++)d.setDate(d.getDate()+1);return ymd(d)}
-function eaten(m,r){return r.pick!=="no"||(m.changeId&&r.change===m.changeId&&r.approve==="yes")}
+function swapped(m,r){return !!(m.alt&&r.pick==="no"&&r.alt==="yes"&&!(m.changeId&&r.change===m.changeId&&r.approve==="yes"))}
+function view(m){var r=state.responses[m.id]||{};return swapped(m,r)?{id:m.id,day:m.day,name:m.alt.name,time:m.alt.time,desc:m.alt.desc,sides:[],was:m.name}:m}
+function unresolved(m){var r=state.responses[m.id]||{};if(m.changeId&&r.change===m.changeId&&r.approve==="yes")return false;return (r.pick==="no"&&r.alt!=="yes")||!!(m.question&&r.change===m.changeId&&r.approve==="no")}
+function eaten(m,r){return r.alt==="yes"||r.pick!=="no"||(m.changeId&&r.change===m.changeId&&r.approve==="yes")}
 function needsStars(week,meals,resp){var t=ymd(new Date());return meals.filter(function(m){var r=resp[m.id]||{},d=dinnerDate(week,m);return d&&d<t&&eaten(m,r)&&!r.stars&&!r.skipped})}
 function fmt(d){var p=d.split("-");var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1];return m+" "+(+p[2])}
 function draw(){
@@ -339,6 +348,7 @@ function card(m){
   h+='<h2>'+esc(m.name)+'</h2><p class="desc">'+esc(m.desc)+'</p>';
   if(m.question)h+='<div class="ask"><div class="ask-q">'+esc(m.question)+'</div><div class="ask-b"><button type="button" data-a="yes">Sounds good</button><button type="button" data-a="no">No thanks</button></div></div>';
   h+='<div class="label">Sound good?</div><div class="picks">'+PICKS.map(function(p){return '<button type="button" data-v="'+p[0]+'">'+p[1]+'</button>'}).join("")+'</div>';
+  if(m.alt&&!m.question)h+='<div class="ask alt-ask" hidden><div class="ask-q">How about <b>'+esc(m.alt.name)+'</b> instead?</div><div class="ask-b"><button type="button" data-alt="yes">Swap it in</button><button type="button" data-alt="no">Something else</button></div></div>';
   if(m.sides.length)h+='<div class="label">Pick your side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div>';
   h+='<label class="label" for="n-'+esc(m.id)+'">Note</label><textarea id="n-'+esc(m.id)+'" rows="1" placeholder="Anything to change? (optional)"></textarea>';
   if(past)h+='<div class="rate"><div class="label">After dinner</div><div class="stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' stars">'+I.star+'</button>'}).join("")+'<span class="hint"></span></div><button type="button" class="skip" data-skip="yes">We didn\'t make this one</button><div class="skipped-note" hidden>Marked as not made. <button type="button" class="skip" data-skip="">Undo</button></div></div>';
@@ -346,8 +356,9 @@ function card(m){
   h+='<div class="saved" aria-live="polite"></div>';
   el.innerHTML=h;
   var r=function(){return state.responses[m.id]||(state.responses[m.id]={})};
-  el.querySelectorAll(".picks button").forEach(function(b){b.onclick=function(){save(m,el,{pick:r().pick===b.dataset.v?"":b.dataset.v})}});
-  el.querySelectorAll(".ask button").forEach(function(b){b.onclick=function(){var cur=r();var on=cur.change===m.changeId&&cur.approve===b.dataset.a;save(m,el,{approve:on?"":b.dataset.a,change:m.changeId})}});
+  el.querySelectorAll(".picks button").forEach(function(b){b.onclick=function(){var v=r().pick===b.dataset.v?"":b.dataset.v,p={pick:v};if(v!=="no"&&r().alt)p.alt="";save(m,el,p)}});
+  el.querySelectorAll("[data-alt]").forEach(function(b){b.onclick=function(){save(m,el,{alt:r().alt===b.dataset.alt?"":b.dataset.alt})}});
+  el.querySelectorAll(".ask:not(.alt-ask) button").forEach(function(b){b.onclick=function(){var cur=r();var on=cur.change===m.changeId&&cur.approve===b.dataset.a;save(m,el,{approve:on?"":b.dataset.a,change:m.changeId})}});
   el.querySelectorAll(".sides button").forEach(function(b){b.onclick=function(){save(m,el,{side:r().side===b.dataset.side?"":b.dataset.side})}});
   el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,{stars:r().stars===n?0:n})}});
   el.querySelectorAll("[data-skip]").forEach(function(b){b.onclick=function(){save(m,el,b.dataset.skip?{skipped:"yes",stars:0}:{skipped:""})}});
@@ -359,7 +370,8 @@ function card(m){
 function paint(m,el){
   var r=state.responses[m.id]||{};
   el.querySelectorAll(".picks button").forEach(function(b){b.setAttribute("aria-pressed",r.pick===b.dataset.v)});
-  el.querySelectorAll(".ask button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
+  var aa=el.querySelector(".alt-ask");if(aa){aa.hidden=r.pick!=="no";aa.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",r.alt===b.dataset.alt)})}
+  el.querySelectorAll(".ask:not(.alt-ask) button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
   el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
   el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
   var ta=el.querySelector("textarea");if(ta&&document.activeElement!==ta&&ta.value!==(r.note||""))ta.value=r.note||"";
@@ -409,7 +421,8 @@ function setMode(v,remember){mode=v;if(remember)try{localStorage.setItem(MK,v)}c
 $("#mode").onclick=function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode,true)};
 function queue(){
   var rate=state.meals.filter(needsRating).map(function(m){return {m:m,kind:"rate"}});
-  var pick=state.week===state.weeks[0]?state.meals.filter(function(m){return needsPick(m)&&!dinnerPassed(m)}).map(function(m){return {m:m,kind:"pick"}}):[];
+  var pick=[];if(state.week===state.weeks[0])state.meals.forEach(function(m){if(dinnerPassed(m))return;var r=state.responses[m.id]||{};
+    if(needsPick(m))pick.push({m:m,kind:"pick"});else if(m.alt&&!m.question&&r.pick==="no"&&!r.alt)pick.push({m:m,kind:"alt"})});
   return rate.concat(pick);
 }
 var total=0;
@@ -429,13 +442,13 @@ function deck(){
   h1.textContent=rateLeft?"How Was Dinner?":"On the Menu";
   if(q.length>total)total=q.length;if(!q.length)total=0;
   var d=$("#deck");d.innerHTML="";
-  $("#acts").hidden=!q.length||q[0].kind==="rate";
+  $("#acts").hidden=!q.length||q[0].kind==="rate";$("#acts").classList.toggle("alt",!!q.length&&q[0].kind==="alt");
   $("#acts").querySelector('[data-act="undo"]').disabled=!history_.length;
   var hint=$(".swipe-hint");
   var done=total-q.length,pg=$("#prog");pg.innerHTML=q.length&&total>1?Array.from({length:total},function(_,i){return '<span class="'+(i<done?"on":"")+'"></span>'}).join(""):"";
-  hint.textContent="Swipe right if it sounds good, left to skip, up to tweak.";hint.hidden=!(q.length&&q[0].kind==="pick"&&swipes<3);
+  hint.textContent=q.length&&q[0].kind==="alt"?"Swipe right to swap it in, left if neither sounds good.":"Swipe right if it sounds good, left to skip, up to tweak.";hint.hidden=!(q.length&&q[0].kind==="pick"&&swipes<3);
   if(!q.length){d.appendChild(recap());return}
-  q.slice(0,3).reverse().forEach(function(x,i,arr){d.appendChild(x.kind==="rate"?rateCard(x.m,arr.length-1-i):swipeCard(x.m,arr.length-1-i))});
+  q.slice(0,3).reverse().forEach(function(x,i,arr){d.appendChild(x.kind==="rate"?rateCard(x.m,arr.length-1-i):x.kind==="alt"?altCard(x.m,arr.length-1-i):swipeCard(x.m,arr.length-1-i))});
 }
 function hero(m){return '<div class="sc-hero d-'+esc(String(m.day).toLowerCase())+'"><div class="sc-meta"><span class="sc-day">'+esc(m.day)+'</span>'+(m.time?'<span class="sc-time">'+I.clock+esc(m.time)+'</span>':"")+'</div><h2 class="sc-name">'+esc(m.name)+'</h2></div>'}
 function depthCls(d){return "sc"+(d===1?" under":d===2?" under2":"")}
@@ -449,9 +462,16 @@ function swipeCard(m,depth){
   if(depth===0)drag(el,m);
   return el;
 }
+function altCard(m,depth){
+  var el=document.createElement("div");el.className=depthCls(depth);el.dataset.id=m.id;el.dataset.kind="alt";el.setAttribute("aria-label",m.day+": how about "+m.alt.name+" instead?");
+  el.innerHTML=hero({day:m.day,name:m.alt.name,time:m.alt.time})+'<div class="sc-body"><span class="sc-alt">'+sm(I.swap,14)+'How about this instead?</span>'+(m.alt.desc?'<p class="sc-desc">'+esc(m.alt.desc)+'</p>':"")+'<p class="sc-was">In place of '+esc(m.name)+'</p></div>'+
+    '<div class="stamp yes" aria-hidden="true">'+I.heart+'</div><div class="stamp no" aria-hidden="true">'+I.x+'</div><div class="stamp tw" aria-hidden="true">'+I.pencil+'</div>';
+  if(depth===0)drag(el,m);
+  return el;
+}
 function rateCard(m,depth){
   var el=document.createElement("div");el.className=depthCls(depth)+" rate-card";el.dataset.id=m.id;el.dataset.kind="rate";
-  el.innerHTML=hero(m)+'<div class="sc-body center"><p class="rc-q">How was it?</p><div class="big-stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' star'+(n>1?"s":"")+'">'+I.star+'</button>'}).join("")+'</div>'+
+  el.innerHTML=hero(view(m))+'<div class="sc-body center"><p class="rc-q">How was it?</p><div class="big-stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' star'+(n>1?"s":"")+'">'+I.star+'</button>'}).join("")+'</div>'+
     '<div class="rc-alt"><button type="button" class="link" data-skip>We didn\'t have it</button><button type="button" class="link" data-later>Ask me later</button></div></div>';
   if(depth===0){
     var stars=el.querySelectorAll("[data-s]");
@@ -466,15 +486,19 @@ function rateCard(m,depth){
 function recap(){
   var el=document.createElement("div");el.className="recap";
   var newest=state.week===state.weeks[0],picking=newest&&!state.meals.every(dinnerPassed),answered=state.meals.filter(function(m){var r=state.responses[m.id]||{};return r.pick||r.stars||r.skipped}).length;
-  var rows=state.meals.map(function(m){var r=state.responses[m.id]||{},st;
+  var open=picking?state.meals.filter(function(m){return !dinnerPassed(m)&&unresolved(m)}):[];
+  var rows=state.meals.map(function(m){var r=state.responses[m.id]||{},st,v=view(m);
     if(r.skipped)st='<span class="st muted">Skipped</span>';
     else if(r.stars)st='<span class="st gold">'+Array(r.stars+1).join(sm(I.star,14))+'</span>';
+    else if(open.indexOf(m)>=0)st='<span class="st soon">New idea coming</span>';
     else if(m.question&&r.change===m.changeId&&r.approve==="no")st='<span class="st no">No thanks</span>';
+    else if(v.was)st='<span class="st yes">'+sm(I.heart,16)+'Swapped</span>';
     else st={yes:'<span class="st yes">'+sm(I.heart,16)+'Yes</span>',tweak:'<span class="st tw">'+sm(I.pencil,15)+'Tweak</span>',no:'<span class="st no">Not this week</span>'}[r.pick]||'<span class="st muted">—</span>';
-    var extra=[r.side,r.note&&"“"+r.note+"”"].filter(Boolean).map(esc).join(" · ");
+    var extra=[v.was&&"instead of "+v.was,r.side,r.note&&"“"+r.note+"”"].filter(Boolean).map(esc).join(" · ");
     var needSide=r.pick&&r.pick!=="no"&&m.sides.length&&!r.side&&!dinnerPassed(m);
-    return '<button type="button" class="rrow" data-id="'+esc(m.id)+'"><span class="rday">'+esc(String(m.day).slice(0,3))+'</span><span class="rmain"><span class="rname">'+esc(m.name)+'</span>'+(extra?'<span class="rextra">'+extra+'</span>':needSide?'<span class="rextra warn">Pick a side</span>':"")+'</span>'+st+I.chev+'</button>'}).join("");
-  el.innerHTML='<div class="recap-top"><div class="check" aria-hidden="true">'+I.check+'</div><div class="recap-t">'+(picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(picking?"Dennis has your picks, "+esc(HER)+". Tap a dinner to change it.":"Thank you, "+esc(HER)+". Your stars are noted for next time.")+'</div></div><div class="rlist">'+rows+'</div>'+
+    return '<button type="button" class="rrow" data-id="'+esc(m.id)+'"><span class="rday">'+esc(String(m.day).slice(0,3))+'</span><span class="rmain"><span class="rname">'+esc(v.name)+'</span>'+(extra?'<span class="rextra">'+extra+'</span>':needSide?'<span class="rextra warn">Pick a side</span>':"")+'</span>'+st+I.chev+'</button>'}).join("");
+  var days=open.map(function(m){return String(m.day).slice(0,3)}),dl=days.length>1?days.slice(0,-1).join(", ")+" and "+days[days.length-1]:days[0];
+  el.innerHTML='<div class="recap-top"><div class="check'+(open.length?' soon':'')+'" aria-hidden="true">'+(open.length?sm(I.swap,30):I.check)+'</div><div class="recap-t">'+(open.length?"Almost There":picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(open.length?"Dennis will find something new for "+esc(dl)+", "+esc(HER)+(/\.$/.test(HER)?"":".")+" Everything else is set.":picking?"Dennis has your picks, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Tap a dinner to change it.":"Thank you, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Your stars are noted for next time.")+'</div></div><div class="rlist">'+rows+'</div>'+
     (!newest?'<button type="button" class="btn ghost" data-back>Back to This Week</button>':"");
   el.querySelectorAll(".rrow").forEach(function(b){b.onclick=function(){var m=state.meals.filter(function(x){return x.id===b.dataset.id})[0];if(m)sheetEdit(m)}});
   var bk=el.querySelector("[data-back]");if(bk)bk.onclick=function(){load(state.weeks[0])};
@@ -502,7 +526,10 @@ function top_(){return $("#deck").querySelector(".sc:not(.under):not(.under2)")}
 function bump(){swipes++;try{localStorage.setItem("dp-swipes",swipes)}catch(_){}}
 function decide(m,dir,el){
   el=el||top_();
-  var r=state.responses[m.id]||{},prev={pick:r.pick||"",side:r.side||"",note:r.note||"",approve:r.approve||"",change:r.change||""};
+  var r=state.responses[m.id]||{},prev={pick:r.pick||"",side:r.side||"",note:r.note||"",approve:r.approve||"",change:r.change||"",alt:r.alt||""};
+  if(el&&el.dataset.kind==="alt"){if(dir==="tweak"){el.style.transform="";el.querySelectorAll(".stamp").forEach(function(s){s.style.opacity=0});return}
+    history_.push({m:m,prev:prev,alt:true});bump();if(dir==="yes")hearts();if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}
+    fly(el,dir,function(){save(m,null,{alt:dir});deck()});return}
   if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}
   if(dir==="tweak"){sheetTweak(m,function(patch){if(!patch){el.style.transform="";el.querySelectorAll(".stamp").forEach(function(s){s.style.opacity=0});return}
       history_.push({m:m,prev:prev});bump();fly(el,"tweak",function(){save(m,null,patch);deck()})});return}
@@ -514,10 +541,10 @@ function decide(m,dir,el){
   fly(el,dir,function(){save(m,null,patch);deck()});
 }
 function undo(){var h=history_.pop();if(!h)return;var p;
-  if(h.rate)p={stars:0,skipped:""};else{p={pick:h.prev.pick,side:h.prev.side,note:h.prev.note};if(h.m.question){p.approve=h.prev.approve;p.change=h.prev.change||h.m.changeId}}
+  if(h.rate)p={stars:0,skipped:""};else if(h.alt)p={alt:""};else{p={alt:h.prev.alt,pick:h.prev.pick,side:h.prev.side,note:h.prev.note};if(h.m.question){p.approve=h.prev.approve;p.change=h.prev.change||h.m.changeId}}
   save(h.m,null,p);deck()}
 $("#acts").onclick=function(e){var b=e.target.closest("button");if(!b||b.disabled)return;var a=b.dataset.act;if(a==="undo")return undo();
-  var el=top_();if(!el||el.dataset.kind==="rate")return;var m=state.meals.filter(function(x){return x.id===el.dataset.id})[0];if(m)decide(m,a,el)};
+  var el=top_();if(!el||el.dataset.kind==="rate"||(a==="tweak"&&el.dataset.kind==="alt"))return;var m=state.meals.filter(function(x){return x.id===el.dataset.id})[0];if(m)decide(m,a,el)};
 $("#back").onclick=function(){load(state.weeks[0])};
 document.addEventListener("keydown",function(e){if($("#swipe").hidden||!$("#sheet").hidden||/TEXTAREA|INPUT/.test(document.activeElement.tagName))return;
   var el=top_();if(!el)return;
@@ -536,17 +563,19 @@ function sheetTweak(m,cb){
       box.querySelector("[data-ok]").onclick=function(){var p={pick:"tweak",note:box.querySelector("textarea").value.trim()};if(side!==(r.side||""))p.side=side;close();cb(p)}});
 }
 function sheetEdit(m){
-  var r=state.responses[m.id]||{},pick=r.pick||"",side=r.side||"",past=dinnerPassed(m),stars=r.stars||0;
-  openSheet('<div class="grab"></div><div class="sh-bar"><button type="button" class="link" data-cancel>Cancel</button><h3 id="sheetT">'+esc(m.name)+'</h3><button type="button" class="link" data-ok>Done</button></div>'+
+  var r=state.responses[m.id]||{},pick=r.pick||"",side=r.side||"",past=dinnerPassed(m),stars=r.stars||0,alt=r.alt||"",ask=m.alt&&!m.question&&!past;
+  openSheet('<div class="grab"></div><div class="sh-bar"><button type="button" class="link" data-cancel>Cancel</button><h3 id="sheetT">'+esc(past?view(m).name:m.name)+'</h3><button type="button" class="link" data-ok>Done</button></div>'+
     (past?'<div class="label">How was it?</div><div class="big-stars small">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" class="'+(n<=stars?"on":"")+'" aria-label="'+n+' stars">'+I.star+'</button>'}).join("")+'</div>':
-    '<div class="seg">'+[["yes","Yes please"],["tweak","Tweak it"],["no","Not this week"]].map(function(p){return '<button type="button" data-p="'+p[0]+'" aria-pressed="'+(pick===p[0])+'">'+p[1]+'</button>'}).join("")+'</div>'+sidesHtml(m,side))+
+    '<div class="seg">'+[["yes","Yes please"],["tweak","Tweak it"],["no","Not this week"]].map(function(p){return '<button type="button" data-p="'+p[0]+'" aria-pressed="'+(pick===p[0])+'">'+p[1]+'</button>'}).join("")+'</div>'+
+    (ask?'<div class="alt-box"'+(pick==="no"?"":" hidden")+'><div class="label">Instead: '+esc(m.alt.name)+'?</div><div class="seg">'+[["yes","Swap it in"],["no","Something else"]].map(function(p){return '<button type="button" data-alt="'+p[0]+'" aria-pressed="'+(alt===p[0])+'">'+p[1]+'</button>'}).join("")+'</div></div>':"")+sidesHtml(m,side))+
     '<textarea rows="2" placeholder="Add a note">'+esc(r.note||"")+'</textarea>',
     function(box,close){wireSides(box,function(){return side},function(v){side=v});
-      box.querySelectorAll("[data-p]").forEach(function(b){b.onclick=function(){pick=pick===b.dataset.p?"":b.dataset.p;box.querySelectorAll("[data-p]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.p===pick)})}});
+      box.querySelectorAll("[data-p]").forEach(function(b){b.onclick=function(){pick=pick===b.dataset.p?"":b.dataset.p;box.querySelectorAll("[data-p]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.p===pick)});var ab=box.querySelector(".alt-box");if(ab)ab.hidden=pick!=="no"}});
+      box.querySelectorAll("[data-alt]").forEach(function(b){b.onclick=function(){alt=alt===b.dataset.alt?"":b.dataset.alt;box.querySelectorAll("[data-alt]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.alt===alt)})}});
       box.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){stars=+b.dataset.s===stars?0:+b.dataset.s;box.querySelectorAll("[data-s]").forEach(function(x){x.classList.toggle("on",+x.dataset.s<=stars)})}});
       box.querySelector("[data-cancel]").onclick=close;
       box.querySelector("[data-ok]").onclick=function(){var p={},note=box.querySelector("textarea").value.trim();
-        if(!past&&pick!==(r.pick||""))p.pick=pick;if(!past&&side!==(r.side||""))p.side=side;if(past&&stars!==(r.stars||0)){p.stars=stars;if(stars)p.skipped=""}if(note!==(r.note||""))p.note=note;
+        if(!past&&pick!==(r.pick||""))p.pick=pick;if(!past){var na=pick==="no"?alt:"";if(na!==(r.alt||""))p.alt=na}if(!past&&side!==(r.side||""))p.side=side;if(past&&stars!==(r.stars||0)){p.stars=stars;if(stars)p.skipped=""}if(note!==(r.note||""))p.note=note;
         close();if(Object.keys(p).length){save(m,null,p);deck()}}});
 }
 $("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet"){var c=$("#sheet").querySelector("[data-cancel]");if(c)c.click()}});
