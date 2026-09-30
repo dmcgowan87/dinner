@@ -96,19 +96,84 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outl
 .sk{height:230px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(100deg,var(--card) 40%,var(--bg) 50%,var(--card) 60%) var(--card);background-size:200% 100%;animation:sk 1.2s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
 .fresh{font-size:12px;color:var(--muted)}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* ---- Swipe mode ---- */
+.mode{display:inline-grid;grid-template-columns:1fr 1fr;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;align-self:flex-start}
+.mode button{font:inherit;font-size:13px;font-weight:600;min-height:36px;padding:4px 18px;border:0;border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+.mode button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+html,body{overflow-x:hidden}
+.swipe{overflow-x:clip;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.bar{display:flex;align-items:center;gap:10px}
+.bar .weeks{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.bar .weeks::-webkit-scrollbar{display:none}
+.bar .weeks button{flex:none}
+.bar .mode{margin-left:auto;flex:none}
+body.swiping .sub,body.swiping #summary{display:none}
+body.swiping .wrap{gap:14px}
+.deck{position:relative;height:clamp(340px,calc(100svh - 340px),540px)}
+.sc{position:absolute;inset:0;background:var(--card);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none;will-change:transform;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .28s}
+.sc.drag{transition:none}
+.sc.under{transform:scale(.955) translateY(12px);opacity:.9;pointer-events:none}
+.sc.under2{transform:scale(.91) translateY(24px);opacity:.6;pointer-events:none}
+.sc-hero{flex:none;padding:26px 24px 22px;background:linear-gradient(160deg,var(--h1),var(--h2));color:var(--hero-ink);position:relative}
+.sc-day{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.sc-name{font-family:var(--display);font-weight:400;font-size:clamp(28px,8vw,36px);line-height:1.08;margin:10px 0 0;font-variation-settings:"opsz" 144;text-wrap:balance}
+.sc-time{position:absolute;top:22px;right:22px;font-size:13px;font-weight:600;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:999px}
+.sc-body{padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px;flex:1;overflow:auto}
+.sc-desc{margin:0;font-size:17px;line-height:1.55}
+.sc-sides{font-size:14px;color:var(--muted)}
+.sc-sides b{color:var(--fg);font-weight:600}
+.sc-q{background:var(--tweak-soft);color:var(--fg);font-weight:600;border-radius:14px;padding:12px 14px;font-size:15px}
+.stamp{position:absolute;top:28px;padding:6px 14px;border:3px solid currentColor;border-radius:10px;font-weight:700;font-size:22px;letter-spacing:.08em;text-transform:uppercase;opacity:0;pointer-events:none;background:var(--card)}
+.stamp.yes{left:22px;color:var(--yes);transform:rotate(-12deg)}
+.stamp.no{right:22px;color:var(--no);transform:rotate(12deg)}
+.stamp.tw{left:50%;top:auto;bottom:28px;color:var(--tweak);transform:translateX(-50%)}
+.acts{display:flex;justify-content:center;align-items:center;gap:18px}
+.act{width:62px;height:62px;border-radius:50%;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow);font-size:26px;line-height:1;cursor:pointer;display:grid;place-items:center;color:var(--fg);transition:transform .12s}
+.act:active{transform:scale(.92)}
+.act.small{width:46px;height:46px;font-size:19px;color:var(--muted)}
+.act.no{color:var(--no)}.act.yes{color:var(--yes)}.act.tw{color:var(--tweak)}
+.act[disabled]{opacity:.35;pointer-events:none}
+.swipe-hint{font-size:13px;color:var(--muted);text-align:center;margin:0}
+.deck-done{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;border:1px dashed var(--line);border-radius:26px;background:var(--card)}
+.deck-done h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}
+.deck-done p{margin:0;color:var(--muted)}
+.btn{font:inherit;font-weight:600;font-size:15px;min-height:46px;padding:8px 22px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,18,16,.38)}
+.sheet[hidden]{display:none}
+.sheet-in{width:100%;max-width:600px;background:var(--card);border-radius:24px 24px 0 0;padding:22px 20px calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:14px;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h3{font-family:var(--display);font-weight:400;font-size:24px;margin:0}
+.sheet .row{display:flex;gap:10px}
+.sheet .row .btn{flex:1}
+:root{--h1:#4d6b54;--h2:#2f4535;--hero-ink:#fff}
+@media (prefers-color-scheme: dark){:root{--h1:#3a5040;--h2:#223027;--hero-ink:#f3f1ec}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 <div class="wrap">
   <header>
     <div class="eyebrow" id="weekLabel">This week's dinners</div>
     <h1>What sounds good?</h1>
-    <p class="sub">Tap a choice for each dinner. After we eat it, come back and give it stars.</p>
+    <p class="sub">Swipe through this week's dinners. After we eat, come back and give them stars.</p>
   </header>
-  <nav class="weeks" id="weeks" hidden></nav>
+  <div class="bar"><nav class="weeks" id="weeks" hidden></nav>
+  <div class="mode" id="mode" hidden><button type="button" data-mode="swipe">Swipe</button><button type="button" data-mode="list">List</button></div></div>
   <div id="summary"></div>
   <div class="nudge" id="nudge" aria-live="polite"></div>
+  <section class="swipe" id="swipe" hidden>
+    <div class="deck" id="deck" aria-live="polite"></div>
+    <div class="acts" id="acts">
+      <button type="button" class="act small" data-act="undo" aria-label="Undo last swipe">↺</button>
+      <button type="button" class="act no" data-act="no" aria-label="Pass">✕</button>
+      <button type="button" class="act tw" data-act="tweak" aria-label="With tweaks">✎</button>
+      <button type="button" class="act yes" data-act="yes" aria-label="Yes, please">♥</button>
+    </div>
+    <p class="swipe-hint">Swipe right for yes, left to pass, up to tweak.</p>
+  </section>
   <div class="how"><strong>Yes, please</strong> if it sounds good. <strong>With tweaks</strong> if you'd change something (add a note). <strong>Pass</strong> and it gets swapped.</div>
   <section class="meals" id="meals"><div class="sk"></div><div class="sk"></div><div class="sk"></div></section>
+  <div class="sheet" id="sheet" hidden><div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetT"></div></div>
   <p class="tip">Everything saves as you tap. To keep this handy, tap Share → Add to Home Screen.</p>
 </div>
 <script>
@@ -135,7 +200,7 @@ function load(week){
       var same=JSON.stringify(d)===JSON.stringify(state);
       if(!week||week===d.weeks[0])cacheSet(d);
       if(same&&shown)return;
-      var a=document.activeElement;if(shown&&a&&a.matches&&a.matches("textarea"))return;
+      var a=document.activeElement;if(shown&&a&&a.matches&&a.matches("textarea"))return;if(shown&&(dragging||!$("#sheet").hidden))return;
       state=d;draw();shown=true})
     .catch(function(){if(!shown)$("#meals").innerHTML='<div class="empty">Couldn\'t load the menu. Check your connection and reopen the page.</div>'});
 }
@@ -153,7 +218,7 @@ function draw(){
   $("#weekLabel").textContent="The week of "+fmt(state.week);
   var box=$("#meals");box.innerHTML="";
   state.meals.forEach(function(m){box.appendChild(card(m))});
-  summary();nudge();
+  summary();nudge();deck();
 }
 var prevCache={};
 function nudge(){
@@ -202,20 +267,22 @@ function paint(m,el){
   el.querySelectorAll(".ask button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
   el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
   el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
+  var ta=el.querySelector("textarea");if(ta&&document.activeElement!==ta&&ta.value!==(r.note||""))ta.value=r.note||"";
   var hint=el.querySelector(".hint");if(hint)hint.textContent=r.stars?"":"How was it?";
   var st=el.querySelector(".stars"),sk=el.querySelector(".skip[data-skip='yes']"),sn=el.querySelector(".skipped-note");
   if(st){st.hidden=!!r.skipped;sk.hidden=!!r.skipped||!!r.stars;sn.hidden=!r.skipped}
 }
 function save(m,el,patch){
+  el=el||document.querySelector('article.meal[data-meal="'+m.id+'"]');
   var r=state.responses[m.id]||(state.responses[m.id]={});
   for(var k in patch)r[k]=patch[k];
-  paint(m,el);summary();delete prevCache[state.week];
+  if(el)paint(m,el);summary();delete prevCache[state.week];
   var key=state.week+"|"+m.id,p=pendGet(),e=p[key]||memPend[key]||{week:state.week,meal:m.id,dish:m.name,patch:{}};
   for(var f in patch)e.patch[f]=patch[f];
   p[key]=e;memPend[key]=e;pendSet(p);
   status(state.week,m.id,"Saving…");flush();
 }
-function status(week,meal,txt){if(week!==state.week)return;var c=document.querySelector('[data-meal="'+meal+'"] .saved');if(c)c.textContent=txt}
+function status(week,meal,txt){if(week!==state.week)return;var c=document.querySelector('article.meal[data-meal="'+meal+'"] .saved');if(c)c.textContent=txt}
 var flushing=false,retryT=null;
 function flush(){
   if(flushing)return;var p=pending(),keys=Object.keys(p);if(!keys.length)return;flushing=true;
@@ -231,6 +298,97 @@ function flush(){
 }
 window.addEventListener("online",flush);
 setTimeout(flush,1500);
+
+/* ---------- Swipe mode ---------- */
+var MK="dp-mode",mode=null,history_=[],dragging=false;
+try{mode=localStorage.getItem(MK)}catch(e){}
+function needsPick(m){var r=state.responses[m.id]||{};return m.question?!(r.change===m.changeId&&r.approve):!r.pick}
+function setMode(v,remember){mode=v;if(remember)try{localStorage.setItem(MK,v)}catch(e){}deck()}
+$("#mode").onclick=function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode,true)};
+function deck(){
+  var todo=state.week&&state.week===state.weeks[0]?state.meals.filter(needsPick):[];
+  if(!mode&&state.week)mode=todo.length?"swipe":"list";var m=mode||"list";
+  $("#mode").hidden=!state.week;
+  $("#mode").querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.mode===m)});
+  var sw=m==="swipe";document.body.classList.toggle("swiping",sw);$("#swipe").hidden=!sw;$("#meals").hidden=sw;document.querySelector(".how").hidden=sw;
+  if(!sw)return;
+  var d=$("#deck");d.innerHTML="";
+  $("#acts").querySelector('[data-act="undo"]').disabled=!history_.length;
+  ["no","tweak","yes"].forEach(function(a){$("#acts").querySelector('[data-act="'+a+'"]').disabled=!todo.length});
+  if(!todo.length){
+    var n=state.meals.length;
+    d.innerHTML='<div class="deck-done"><div style="font-size:40px">🍽️</div><h2>All set</h2><p>'+(state.week===state.weeks[0]?'You\'ve gone through all '+n+' dinners. Pick sides or add notes in the list.':'Swiping is for the newest week. Use the list to rate these.')+'</p><button type="button" class="btn">See the list</button></div>';
+    d.querySelector(".btn").onclick=function(){setMode("list",false);scrollTo(0,0)};return;
+  }
+  todo.slice(0,3).reverse().forEach(function(mm,i,arr){var depth=arr.length-1-i;d.appendChild(swipeCard(mm,depth))});
+}
+function swipeCard(m,depth){
+  var r=state.responses[m.id]||{},el=document.createElement("div");
+  el.className="sc"+(depth===1?" under":depth===2?" under2":"");el.dataset.id=m.id;
+  el.setAttribute("aria-label",m.day+": "+m.name);
+  var sides=m.sides.length?'<div class="sc-sides">Comes with your pick of <b>'+m.sides.map(esc).join('</b> or <b>')+'</b></div>':"";
+  el.innerHTML='<div class="sc-hero"><div class="sc-day">'+esc(m.day)+'</div><h2 class="sc-name">'+esc(m.name)+'</h2>'+(m.time?'<span class="sc-time">'+esc(m.time)+'</span>':"")+'</div>'+
+    '<div class="sc-body">'+(m.question?'<div class="sc-q">'+esc(m.question)+'</div>':"")+'<p class="sc-desc">'+esc(m.desc)+'</p>'+sides+'</div>'+
+    '<div class="stamp yes">'+(m.question?"Sounds good":"Yes")+'</div><div class="stamp no">'+(m.question?"No thanks":"Pass")+'</div><div class="stamp tw">Tweak</div>';
+  if(depth===0)drag(el,m);
+  return el;
+}
+function drag(el,m){
+  var sx=0,sy=0,dx=0,dy=0,id=null,st=el.querySelectorAll(".stamp");
+  el.addEventListener("pointerdown",function(e){if(e.button>0)return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;dragging=true;el.classList.add("drag");try{el.setPointerCapture(id)}catch(_){}});
+  el.addEventListener("pointermove",function(e){if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;
+    el.style.transform="translate("+dx+"px,"+dy+"px) rotate("+(dx/18)+"deg)";
+    st[0].style.opacity=Math.max(0,Math.min(1,dx/100));st[1].style.opacity=Math.max(0,Math.min(1,-dx/100));st[2].style.opacity=Math.abs(dx)<60?Math.max(0,Math.min(1,-dy/100)):0});
+  var end=function(e){if(e.pointerId!==id)return;id=null;dragging=false;el.classList.remove("drag");
+    if(dx>100)decide(m,"yes",el);else if(dx<-100)decide(m,"no",el);else if(dy<-110&&Math.abs(dx)<80)decide(m,"tweak",el);
+    else{el.style.transform="";st.forEach(function(s){s.style.opacity=0})}};
+  el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);
+}
+function fly(el,dir,done){
+  if(!el){done();return}
+  var x=dir==="yes"?1:dir==="no"?-1:0;el.classList.remove("drag");
+  el.querySelector(".stamp."+(dir==="tweak"?"tw":dir)).style.opacity=1;
+  el.style.transform=x?"translate("+(x*innerWidth*1.2)+"px,40px) rotate("+(x*24)+"deg)":"translate(0,-"+(innerHeight)+"px)";el.style.opacity=0;
+  setTimeout(done,260);
+}
+function top_(){return $("#deck").querySelector(".sc:not(.under):not(.under2)")}
+function decide(m,dir,el){
+  el=el||top_();
+  var r=state.responses[m.id]||{},prev={pick:r.pick||"",side:r.side||"",note:r.note||"",approve:r.approve||"",change:r.change||""};
+  if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}
+  if(dir==="tweak"){sheetTweak(m,function(patch){if(!patch){el.style.transform="";el.querySelectorAll(".stamp").forEach(function(s){s.style.opacity=0});return}
+      history_.push({m:m,prev:prev});fly(el,"tweak",function(){save(m,null,patch);deck()})});return}
+  var patch;
+  if(m.question)patch=dir==="yes"?{approve:"yes",change:m.changeId}:{approve:"no",change:m.changeId};
+  else patch={pick:dir};
+  if(m.question&&dir==="yes"&&!r.pick)patch.pick="yes";
+  history_.push({m:m,prev:prev});
+  fly(el,dir,function(){save(m,null,patch);
+    deck();if(dir==="yes"&&m.sides.length&&!r.side)sheetSide(m,function(){})});
+}
+function undo(){var h=history_.pop();if(!h)return;var p={pick:h.prev.pick,side:h.prev.side,note:h.prev.note};if(h.m.question){p.approve=h.prev.approve;p.change=h.prev.change||h.m.changeId}save(h.m,null,p);deck()}
+$("#acts").onclick=function(e){var b=e.target.closest("button");if(!b||b.disabled)return;var a=b.dataset.act;if(a==="undo")return undo();
+  var el=top_();if(!el)return;var m=state.meals.filter(function(x){return x.id===el.dataset.id})[0];if(m)decide(m,a,el)};
+document.addEventListener("keydown",function(e){if($("#swipe").hidden||!$("#sheet").hidden||/TEXTAREA|INPUT/.test(document.activeElement.tagName))return;
+  var k={ArrowRight:"yes",ArrowLeft:"no",ArrowUp:"tweak"}[e.key];if(!k)return;var el=top_();if(!el)return;e.preventDefault();
+  var m=state.meals.filter(function(x){return x.id===el.dataset.id})[0];if(m)decide(m,k,el)});
+function openSheet(html,wire){var sh=$("#sheet"),box=sh.querySelector(".sheet-in");box.innerHTML=html;sh.hidden=false;wire(box,function(){sh.hidden=true;box.innerHTML=""});
+  var f=box.querySelector("textarea,button");if(f)setTimeout(function(){f.focus()},50)}
+function sheetSide(m,after){
+  openSheet('<h3 id="sheetT">Which side with '+esc(m.name)+'?</h3><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div><button type="button" class="btn ghost" data-skip>Decide later</button>',
+    function(box,close){box.querySelectorAll("[data-side]").forEach(function(b){b.onclick=function(){save(m,null,{side:b.dataset.side});close();after()}});box.querySelector("[data-skip]").onclick=function(){close();after()}});
+}
+function sheetTweak(m,cb){
+  var r=state.responses[m.id]||{};
+  openSheet('<h3 id="sheetT">What would you change?</h3><textarea rows="3" placeholder="e.g. less spicy, swap the side, lighter on cheese">'+esc(r.note||"")+'</textarea>'+
+    (m.sides.length?'<div class="label">Side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'" aria-pressed="'+(r.side===s)+'">'+esc(s)+'</button>'}).join("")+'</div>':"")+
+    '<div class="row"><button type="button" class="btn ghost" data-cancel>Cancel</button><button type="button" class="btn" data-ok>Save</button></div>',
+    function(box,close){var side=r.side||"";
+      box.querySelectorAll("[data-side]").forEach(function(b){b.onclick=function(){side=side===b.dataset.side?"":b.dataset.side;box.querySelectorAll("[data-side]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.side===side)})}});
+      box.querySelector("[data-cancel]").onclick=function(){close();cb(null)};
+      box.querySelector("[data-ok]").onclick=function(){var p={pick:"tweak",note:box.querySelector("textarea").value.trim()};if(side!==(r.side||""))p.side=side;close();cb(p)}});
+}
+$("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet"){var c=$("#sheet").querySelector("[data-cancel],[data-skip]");if(c)c.click()}});
 load(new URLSearchParams(location.search).get("week")||undefined);
 </script>
 <script>document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"){flush();if(state.week&&!document.activeElement.matches("textarea"))load(state.week)}});</script>
