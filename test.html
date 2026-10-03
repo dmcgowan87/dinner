@@ -233,6 +233,28 @@ textarea{background:rgba(255,235,225,.06)!important}
 .sc-was{font-size:14px;color:var(--muted);margin:0}
 .acts.alt .act.tw{opacity:.25;pointer-events:none}
 .st.soon{color:var(--tweak)}
+.rate3{display:flex;gap:8px;justify-content:center;width:100%;max-width:360px;margin:0 auto}
+.rate3 button{flex:1 1 0;min-width:0!important;padding:0 8px!important;white-space:nowrap}
+.rate3 button{min-width:96px;min-height:48px;border-radius:999px;border:1px solid var(--line,rgba(255,235,225,.16));background:rgba(255,235,225,.06);color:var(--fg);font:inherit;font-size:16px;font-weight:600;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.rate3 button[data-s="5"].on{background:linear-gradient(145deg,#ff6b86,#e0264f);border-color:transparent;color:#fff}
+.rate3 button[data-s="3"].on{background:rgba(240,194,123,.22);border-color:var(--star);color:var(--star)}
+.rate3 button[data-s="1"].on{background:rgba(255,235,225,.14);border-color:var(--muted);color:var(--fg)}
+.rate3.small button{min-width:84px;min-height:44px;font-size:15px}
+.recap>*{flex-shrink:0}
+.glance{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:0 8px}
+.glance span{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:rgba(255,235,225,.06);color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.glance span i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.glance .g-yes i{background:var(--yes)}.glance .g-open i{background:var(--tweak)}.glance .g-rated i{background:var(--star)}
+.tonight{margin:0 4px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(255,92,128,.22),rgba(255,92,128,.06));display:flex;flex-direction:column;gap:2px}
+.tonight small{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tint,#ff5c80)}
+.tonight b{font-family:var(--serif);font-size:20px;font-weight:600}
+.tonight span{font-size:14px;color:var(--muted)}
+.wish{display:flex;flex-direction:column;gap:6px;padding:0 4px}
+.wish label{font-size:15px;font-weight:600}
+.wish textarea{min-height:44px}
+.wish .wsaved{font-size:13px;color:var(--muted);min-height:1em}
+.favrow{display:flex;gap:8px;flex-wrap:wrap}
+.fav-mark{color:var(--yes);display:inline-flex;margin-left:6px;vertical-align:-2px}
 .sync{margin-top:8px;font-size:13px;color:var(--muted)}.sync.warn{color:var(--tweak)}
 .alt-ask .ask-q b{font-weight:600}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
@@ -348,6 +370,13 @@ function load(week){
 var DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 function ymd(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 function dinnerDate(week,m){var i=DAYS.indexOf(String(m.day).toLowerCase());if(i<0)return null;var p=week.split("-"),d=new Date(+p[0],+p[1]-1,+p[2],12);for(var k=0;k<7&&d.getDay()!==i;k++)d.setDate(d.getDate()+1);return ymd(d)}
+var RATE=[[5,"Loved"],[3,"Fine"],[1,"Not again"]];
+function rateOf(n){return !n?0:n>=4?5:n>=2?3:1}
+function rateLabel(n){var k=rateOf(n);return k===5?"Loved":k===3?"Fine":k===1?"Not again":""}
+function rate3(cur,small){return '<div class="rate3'+(small?" small":"")+'" role="group" aria-label="How was it?">'+RATE.map(function(x){return '<button type="button" data-s="'+x[0]+'" class="'+(rateOf(cur)===x[0]?"on":"")+'">'+(x[0]===5?sm(I.heart,18):"")+x[1]+'</button>'}).join("")+'</div>'}
+function ratePatch(n){var p={stars:n};if(n){p.skipped="";p.fav=n===5?"yes":n===1?"never":""}else p.fav="";return p}
+function deadline(){if(!state.week||state.week!==state.weeks[0])return null;var p=state.week.split("-"),d=new Date(+p[0],+p[1]-1,+p[2],7);while(d.getDay()!==6)d.setDate(d.getDate()-1);return d}
+function tonightMeal(){var t=ymd(new Date());if(new Date().getHours()>=21)return null;return state.meals.filter(function(m){var r=state.responses[m.id]||{};return dinnerDate(state.week,m)===t&&!r.skipped&&!unresolved(m)})[0]||null}
 function swapped(m,r){return !!(m.alt&&r.pick==="no"&&r.alt==="yes"&&!(m.changeId&&r.change===m.changeId&&r.approve==="yes"))}
 function view(m){var r=state.responses[m.id]||{};return swapped(m,r)?{id:m.id,day:m.day,name:m.alt.name,time:m.alt.time,desc:m.alt.desc,sides:[],was:m.name}:m}
 function unresolved(m){var r=state.responses[m.id]||{};if(m.changeId&&r.change===m.changeId&&r.approve==="yes")return false;return (r.pick==="no"&&r.alt!=="yes")||!!(m.question&&r.change===m.changeId&&r.approve==="no")}
@@ -391,7 +420,7 @@ function card(m){
   if(m.alt&&!m.question)h+='<div class="ask alt-ask" hidden><div class="ask-q">How about <b>'+esc(m.alt.name)+'</b> instead?</div><div class="ask-b"><button type="button" data-alt="yes">Swap it in</button><button type="button" data-alt="no">Something else</button></div></div>';
   if(m.sides.length)h+='<div class="label">Pick your side</div><div class="sides">'+m.sides.map(function(s){return '<button type="button" data-side="'+esc(s)+'">'+esc(s)+'</button>'}).join("")+'</div>';
   h+='<label class="label" for="n-'+esc(m.id)+'">Note</label><textarea id="n-'+esc(m.id)+'" rows="1" placeholder="Anything to change? (optional)"></textarea>';
-  if(past)h+='<div class="rate"><div class="label">After dinner</div><div class="stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' stars">'+I.star+'</button>'}).join("")+'<span class="hint"></span></div><button type="button" class="skip" data-skip="yes">We didn\'t make this one</button><div class="skipped-note" hidden>Marked as not made. <button type="button" class="skip" data-skip="">Undo</button></div></div>';
+  if(past)h+='<div class="rate"><div class="label">After dinner</div><div class="stars rate3 small">'+RATE.map(function(x){return '<button type="button" data-s="'+x[0]+'">'+x[1]+'</button>'}).join("")+'<span class="hint"></span></div><button type="button" class="skip" data-skip="yes">We didn\'t make this one</button><div class="skipped-note" hidden>Marked as not made. <button type="button" class="skip" data-skip="">Undo</button></div></div>';
   else h+='<div class="later">Stars open after dinner on '+esc(m.day)+'.</div>';
   h+='<div class="saved" aria-live="polite"></div>';
   el.innerHTML=h;
@@ -400,7 +429,7 @@ function card(m){
   el.querySelectorAll("[data-alt]").forEach(function(b){b.onclick=function(){save(m,el,{alt:r().alt===b.dataset.alt?"":b.dataset.alt})}});
   el.querySelectorAll(".ask:not(.alt-ask) button").forEach(function(b){b.onclick=function(){var cur=r();var on=cur.change===m.changeId&&cur.approve===b.dataset.a;save(m,el,{approve:on?"":b.dataset.a,change:m.changeId})}});
   el.querySelectorAll(".sides button").forEach(function(b){b.onclick=function(){save(m,el,{side:r().side===b.dataset.side?"":b.dataset.side})}});
-  el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,{stars:r().stars===n?0:n})}});
+  el.querySelectorAll(".stars button").forEach(function(b){b.onclick=function(){var n=+b.dataset.s;save(m,el,ratePatch(rateOf(r().stars)===n?0:n))}});
   el.querySelectorAll("[data-skip]").forEach(function(b){b.onclick=function(){save(m,el,b.dataset.skip?{skipped:"yes",stars:0}:{skipped:""})}});
   var ta=el.querySelector("textarea"),t;ta.value=r().note||"";
   ta.oninput=function(){clearTimeout(t);t=setTimeout(function(){save(m,el,{note:ta.value.trim()})},1000)};
@@ -413,7 +442,7 @@ function paint(m,el){
   var aa=el.querySelector(".alt-ask");if(aa){aa.hidden=r.pick!=="no";aa.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",r.alt===b.dataset.alt)})}
   el.querySelectorAll(".ask:not(.alt-ask) button").forEach(function(b){b.setAttribute("aria-pressed",r.change===m.changeId&&r.approve===b.dataset.a)});
   el.querySelectorAll(".sides button").forEach(function(b){b.setAttribute("aria-pressed",r.side===b.dataset.side)});
-  el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",(r.stars||0)>=+b.dataset.s)});
+  el.querySelectorAll(".stars button").forEach(function(b){b.classList.toggle("on",rateOf(r.stars)===+b.dataset.s)});
   var ta=el.querySelector("textarea");if(ta&&document.activeElement!==ta&&ta.value!==(r.note||""))ta.value=r.note||"";
   var hint=el.querySelector(".hint");if(hint)hint.textContent=r.stars?"":"How was it?";
   var st=el.querySelector(".stars"),sk=el.querySelector(".skip[data-skip='yes']"),sn=el.querySelector(".skipped-note");
@@ -484,6 +513,7 @@ function deck(){
   if(!sw){h1.textContent=newest?"On the Menu":"Week of "+fmt(state.week);return}
   var rateLeft=q.filter(function(x){return x.kind==="rate"}).length;
   h1.textContent=rateLeft?"How Was Dinner?":"On the Menu";
+  var dl_=deadline(),sub=document.querySelector(".sub");if(sub){var pk=q.some(function(x){return x.kind!=="rate"});sub.textContent=pk&&dl_&&new Date()<dl_?"Picks by "+dl_.toLocaleDateString("en-US",{weekday:"long"})+", 7 am, so Dennis can shop.":"";sub.hidden=!sub.textContent}
   if(q.length>total)total=q.length;if(!q.length)total=0;
   var d=$("#deck");d.innerHTML="";
   $("#acts").hidden=!q.length||q[0].kind==="rate";$("#acts").classList.toggle("alt",!!q.length&&q[0].kind==="alt");$("#acts").querySelector('[data-act="tweak"]').disabled=!!q.length&&q[0].kind==="alt";
@@ -515,13 +545,13 @@ function altCard(m,depth){
 }
 function rateCard(m,depth){
   var el=document.createElement("div");el.className=depthCls(depth)+" rate-card";el.dataset.id=m.id;el.dataset.kind="rate";
-  el.innerHTML=hero(view(m))+'<div class="sc-body center"><p class="rc-q">How was it?</p><div class="big-stars">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" aria-label="'+n+' star'+(n>1?"s":"")+'">'+I.star+'</button>'}).join("")+'</div>'+
+  el.innerHTML=hero(view(m))+'<div class="sc-body center"><p class="rc-q">How was it?</p>'+rate3(0)+
     '<div class="rc-alt"><button type="button" class="link" data-skip>We didn\'t have it</button><button type="button" class="link" data-later>Ask me later</button></div></div>';
   if(depth===0){
     var stars=el.querySelectorAll("[data-s]");
-    stars.forEach(function(b){b.onmouseenter=function(){stars.forEach(function(x){x.classList.toggle("on",+x.dataset.s<=+b.dataset.s)})};
-      b.onclick=function(){var n=+b.dataset.s;stars.forEach(function(x){x.classList.toggle("on",+x.dataset.s<=n)});history_.push({m:m,prev:{stars:0,skipped:""},rate:true});
-        if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}setTimeout(function(){fly(el,"yes",function(){save(m,null,{stars:n});deck()})},260)}});
+    stars.forEach(function(b){
+      b.onclick=function(){var n=+b.dataset.s;stars.forEach(function(x){x.classList.toggle("on",x===b)});history_.push({m:m,prev:{stars:0,skipped:"",fav:""},rate:true});
+        if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}setTimeout(function(){fly(el,n===1?"no":"yes",function(){save(m,null,ratePatch(n));deck()})},260)}});
     el.querySelector("[data-skip]").onclick=function(){history_.push({m:m,prev:{stars:0,skipped:""},rate:true});fly(el,"no",function(){save(m,null,{skipped:"yes",stars:0});deck()})};
     el.querySelector("[data-later]").onclick=function(){later[state.week+m.id]=1;fly(el,"no",deck)};
   }
@@ -533,19 +563,27 @@ function recap(){
   var open=picking?state.meals.filter(function(m){return !dinnerPassed(m)&&unresolved(m)}):[];
   var rows=state.meals.map(function(m){var r=state.responses[m.id]||{},st,v=view(m);
     if(r.skipped)st='<span class="st muted">Skipped</span>';
-    else if(r.stars)st='<span class="st gold">'+Array(r.stars+1).join(sm(I.star,14))+'</span>';
+    else if(r.stars)st='<span class="st gold">'+esc(rateLabel(r.stars))+'</span>';
     else if(open.indexOf(m)>=0)st='<span class="st soon">New idea coming</span>';
     else if(m.question&&r.change===m.changeId&&r.approve==="no")st='<span class="st no">No thanks</span>';
     else if(v.was)st='<span class="st yes">'+sm(I.heart,16)+'Swapped</span>';
     else st={yes:'<span class="st yes">'+sm(I.heart,16)+'Yes</span>',tweak:'<span class="st tw">'+sm(I.pencil,15)+'Tweak</span>',no:'<span class="st no">Not this week</span>'}[r.pick]||'<span class="st muted">—</span>';
     var extra=[v.was&&"instead of "+v.was,r.side,r.note&&"“"+r.note+"”"].filter(Boolean).map(esc).join(" · ");
     var needSide=r.pick&&r.pick!=="no"&&m.sides.length&&!r.side&&!dinnerPassed(m);
-    return '<button type="button" class="rrow" data-id="'+esc(m.id)+'"><span class="rday">'+esc(String(m.day).slice(0,3))+'</span><span class="rmain"><span class="rname">'+esc(v.name)+'</span>'+(extra?'<span class="rextra">'+extra+'</span>':needSide?'<span class="rextra warn">Pick a side</span>':"")+'</span>'+st+I.chev+'</button>'}).join("");
+    return '<button type="button" class="rrow" data-id="'+esc(m.id)+'"><span class="rday">'+esc(String(m.day).slice(0,3))+'</span><span class="rmain"><span class="rname">'+esc(v.name)+(r.fav==="yes"?'<span class="fav-mark" aria-label="Favorite">'+sm(I.heart,13)+'</span>':"")+'</span>'+(extra?'<span class="rextra">'+extra+'</span>':needSide?'<span class="rextra warn">Pick a side</span>':"")+'</span>'+st+I.chev+'</button>'}).join("");
+  var glance='<div class="glance" aria-label="Week at a glance">'+state.meals.map(function(m){var r=state.responses[m.id]||{},c=r.skipped?"":r.stars?"g-rated":open.indexOf(m)>=0||(!r.pick&&!dinnerPassed(m))?"g-open":r.pick?"g-yes":"";return '<span class="'+c+'"><i></i>'+esc(String(m.day).slice(0,3))+'</span>'}).join("")+'</div>';
+  var tm=newest?tonightMeal():null,tv=tm&&view(tm),tr=tm&&(state.responses[tm.id]||{});
+  var tonight=tm?'<div class="tonight"><small>Tonight</small><b>'+esc(tv.name)+'</b>'+(tr.side||tv.time?'<span>'+esc([tr.side,tv.time].filter(Boolean).join(" · "))+'</span>':"")+'</div>':"";
+  var wishR=state.responses.wish||{};
+  var wish=newest?'<div class="wish"><label for="wishBox">Craving something?</label><textarea id="wishBox" rows="2" placeholder="A dish, a flavor, anything. It helps next week\'s menu.">'+esc(wishR.note||"")+'</textarea><div class="wsaved" aria-live="polite"></div></div>':"";
   var days=open.map(function(m){return String(m.day).slice(0,3)}),dl=days.length>1?days.slice(0,-1).join(", ")+" and "+days[days.length-1]:days[0];
-  el.innerHTML='<div class="recap-top"><div class="check'+(open.length?' soon':'')+'" aria-hidden="true">'+(open.length?sm(I.swap,30):I.check)+'</div><div class="recap-t">'+(open.length?"Almost There":picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(open.length?"Dennis will find something new for "+esc(dl)+", "+esc(HER)+(/\.$/.test(HER)?"":".")+" Everything else is set.":picking?"Dennis has your picks, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Tap a dinner to change it.":"Thank you, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Your stars are noted for next time.")+'</div><div class="sync" id="sync" role="status" hidden></div></div><div class="rlist">'+rows+'</div>'+
+  el.innerHTML=tonight+'<div class="recap-top"><div class="check'+(open.length?' soon':'')+'" aria-hidden="true">'+(open.length?sm(I.swap,30):I.check)+'</div><div class="recap-t">'+(open.length?"Almost There":picking?"It's a Date":"Noted, With Love")+'</div><div class="recap-s">'+(open.length?"Dennis will find something new for "+esc(dl)+", "+esc(HER)+(/\.$/.test(HER)?"":".")+" Everything else is set.":picking?"Dennis has your picks, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Tap a dinner to change it.":"Thank you, "+esc(HER)+(/\.$/.test(HER)?"":".")+" Your stars are noted for next time.")+'</div><div class="sync" id="sync" role="status" hidden></div></div>'+glance+'<div class="rlist">'+rows+'</div>'+wish+
     (!newest?'<button type="button" class="btn ghost" data-back>Back to This Week</button>':"");
   el.querySelectorAll(".rrow").forEach(function(b){b.onclick=function(){var m=state.meals.filter(function(x){return x.id===b.dataset.id})[0];if(m)sheetEdit(m)}});
   var bk=el.querySelector("[data-back]");if(bk)bk.onclick=function(){load(state.weeks[0])};
+  var wb=el.querySelector("#wishBox"),wt;if(wb){var ws=el.querySelector(".wsaved"),wm={id:"wish",name:"Craving",sides:[]};
+    var put=function(){var v=wb.value.trim();if(v===((state.responses.wish||{}).note||""))return;save(wm,null,{note:v});ws.textContent=v?"Dennis will see this when he plans next week.":""};
+    wb.oninput=function(){clearTimeout(wt);wt=setTimeout(put,1200)};wb.onblur=function(){clearTimeout(wt);put()}}
   setTimeout(syncNote,0);
   return el;
 }
@@ -586,7 +624,7 @@ function decide(m,dir,el){
   fly(el,dir,function(){save(m,null,patch);deck()});
 }
 function undo(){var h=history_.pop();if(!h)return;var p;
-  if(h.rate)p={stars:0,skipped:""};else if(h.alt)p={alt:""};else{p={alt:h.prev.alt,pick:h.prev.pick,side:h.prev.side,note:h.prev.note};if(h.m.question){p.approve=h.prev.approve;p.change=h.prev.change||h.m.changeId}}
+  if(h.rate)p={stars:0,skipped:"",fav:""};else if(h.alt)p={alt:""};else{p={alt:h.prev.alt,pick:h.prev.pick,side:h.prev.side,note:h.prev.note};if(h.m.question){p.approve=h.prev.approve;p.change=h.prev.change||h.m.changeId}}
   save(h.m,null,p);deck()}
 $("#acts").onclick=function(e){var b=e.target.closest("button");if(!b||b.disabled)return;var a=b.dataset.act;if(a==="undo")return undo();
   var el=top_();if(!el||el.dataset.kind==="rate"||(a==="tweak"&&el.dataset.kind==="alt"))return;var m=state.meals.filter(function(x){return x.id===el.dataset.id})[0];if(m)decide(m,a,el)};
@@ -610,17 +648,17 @@ function sheetTweak(m,cb){
 function sheetEdit(m){
   var r=state.responses[m.id]||{},pick=r.pick||"",side=r.side||"",past=dinnerPassed(m),stars=r.stars||0,alt=r.alt||"",ask=m.alt&&!m.question&&!past;
   openSheet('<div class="grab"></div><div class="sh-bar"><button type="button" class="link" data-cancel>Cancel</button><h3 id="sheetT">'+esc(past?view(m).name:m.name)+'</h3><button type="button" class="link" data-ok>Done</button></div>'+
-    (past?'<div class="label">How was it?</div><div class="big-stars small">'+[1,2,3,4,5].map(function(n){return '<button type="button" data-s="'+n+'" class="'+(n<=stars?"on":"")+'" aria-label="'+n+' stars">'+I.star+'</button>'}).join("")+'</div>':
+    (past?'<div class="label">How was it?</div>'+rate3(stars,true):
     '<div class="seg">'+[["yes","Yes please"],["tweak","Tweak it"],["no","Not this week"]].map(function(p){return '<button type="button" data-p="'+p[0]+'" aria-pressed="'+(pick===p[0])+'">'+p[1]+'</button>'}).join("")+'</div>'+
     (ask?'<div class="alt-box"'+(pick==="no"?"":" hidden")+'><div class="label">Instead: '+esc(m.alt.name)+'?</div><div class="seg">'+[["yes","Swap it in"],["no","Something else"]].map(function(p){return '<button type="button" data-alt="'+p[0]+'" aria-pressed="'+(alt===p[0])+'">'+p[1]+'</button>'}).join("")+'</div></div>':"")+sidesHtml(m,side))+
     '<textarea rows="2" placeholder="Add a note">'+esc(r.note||"")+'</textarea>',
     function(box,close){wireSides(box,function(){return side},function(v){side=v});
       box.querySelectorAll("[data-p]").forEach(function(b){b.onclick=function(){pick=pick===b.dataset.p?"":b.dataset.p;box.querySelectorAll("[data-p]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.p===pick)});var ab=box.querySelector(".alt-box");if(ab)ab.hidden=pick!=="no"}});
       box.querySelectorAll("[data-alt]").forEach(function(b){b.onclick=function(){alt=alt===b.dataset.alt?"":b.dataset.alt;box.querySelectorAll("[data-alt]").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.alt===alt)})}});
-      box.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){stars=+b.dataset.s===stars?0:+b.dataset.s;box.querySelectorAll("[data-s]").forEach(function(x){x.classList.toggle("on",+x.dataset.s<=stars)})}});
+      box.querySelectorAll("[data-s]").forEach(function(b){b.onclick=function(){stars=+b.dataset.s===rateOf(stars)?0:+b.dataset.s;box.querySelectorAll("[data-s]").forEach(function(x){x.classList.toggle("on",+x.dataset.s===rateOf(stars))})}});
       box.querySelector("[data-cancel]").onclick=close;
       box.querySelector("[data-ok]").onclick=function(){var p={},note=box.querySelector("textarea").value.trim();
-        if(!past&&pick!==(r.pick||""))p.pick=pick;if(!past){var na=pick==="no"?alt:"";if(na!==(r.alt||""))p.alt=na}if(!past&&side!==(r.side||""))p.side=side;if(past&&stars!==(r.stars||0)){p.stars=stars;if(stars)p.skipped=""}if(note!==(r.note||""))p.note=note;
+        if(!past&&pick!==(r.pick||""))p.pick=pick;if(!past){var na=pick==="no"?alt:"";if(na!==(r.alt||""))p.alt=na}if(!past&&side!==(r.side||""))p.side=side;if(past&&rateOf(stars)!==rateOf(r.stars||0)){var rp=ratePatch(stars);for(var k in rp)p[k]=rp[k]}if(note!==(r.note||""))p.note=note;
         close();if(Object.keys(p).length){save(m,null,p);deck()}}});
 }
 $("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet"){var c=$("#sheet").querySelector("[data-cancel]");if(c)c.click()}});
